@@ -67,19 +67,15 @@ export class NotebookExecution {
     compiled: CompiledCell,
     name: string | null
   ): VariableInspector => {
-    // @ts-ignore
     // Using some private api (handle) for debugging
-    const debugName = name || cell?.handle;
-
-    console.log("asked for inspector for name: ", name);
+    // @ts-ignore
+    const debugName = name || `Cell #${cell?.handle}`;
     return {
       pending() {
         cell.metadata.statusMessage = "pending";
         cell.metadata.runState = vscode.NotebookCellRunState.Running;
       },
       fulfilled(value) {
-        // Find the right cell for this, how??
-        // set every cell's output to this lol
         cell.outputs = [
           {
             outputKind: vscode.CellOutputKind.Text,
@@ -93,11 +89,11 @@ export class NotebookExecution {
           cell.metadata.statusMessage = "";
           cell.metadata.runState = vscode.NotebookCellRunState.Idle;
         }
-
-        console.log(debugName, "fulfilled value", value);
+        console.log(debugName, "Fulfilled value", value);
       },
       rejected(error) {
         console.error(debugName, "Runtime error:", error);
+        cell.metadata.statusMessage = error.message;
         cell.metadata.runState = vscode.NotebookCellRunState.Error;
       },
     };

@@ -105,8 +105,7 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     cell: vscode.NotebookCell | undefined,
     token: vscode.CancellationToken
   ): Promise<void> {
-    // I guess this is where we get told that the user changed something with the notebook?
-    // A bit of a poor experience for us?
+    // This is where we get told that the user changed something with the notebook
 
     const runtime = this.ensureRuntime(document);
 

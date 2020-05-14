@@ -1,0 +1,36 @@
+md`# Generator Test
+
+This is some text. Why does it say "undefined"?`;
+
+a = 12
+
+b = a + 2
+
+function* range(n) {
+  for (let i = 0; i < n; ++i) {
+    yield i;
+  }
+}
+
+{
+  for (const i of range(Infinity)) {
+    yield Promises.tick(1000, i + 1);
+  }
+}
+
+py`def my_func():
+    return`;
+
+md`# Import Test`;
+
+import {viewof selection as cars} from "@d3/brushable-scatterplot"
+
+viewof cars
+
+md`### Selection:
+~~~json
+
+${cars}
+
+~~~
+`;

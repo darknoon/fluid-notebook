@@ -44,6 +44,12 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     //   }
     // );
 
+    vscode.notebook.onDidChangeNotebookDocument(
+      (e: vscode.NotebookDocumentChangeEvent) => {
+        this.ensureRuntime(e.document);
+      }
+    );
+
     return {
       cells,
       languages: NotebookContentProvider.supportedLanguages,

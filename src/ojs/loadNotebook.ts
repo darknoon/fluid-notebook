@@ -37,11 +37,17 @@ function nodeIsPython(body: acorn.Node): body is PythonStructure {
   );
 }
 
-interface CompiledCell {
+export interface CompiledCell {
   // Cells don't have to be named
   name: string | null;
   inputs: string[];
   value: Function;
+  // Cells can be an async function
+  async: boolean;
+  // Cells can be a generator that continually returns new results
+  generator: boolean;
+  //
+  blockStatement: boolean;
 }
 
 function isDefined<T>(v: T | undefined): v is T {
@@ -52,14 +58,13 @@ function isDefined<T>(v: T | undefined): v is T {
 From https://github.com/hpcc-systems/Visualization/blob/61f184fbcf95588cc82043920d4c7c9260d5fac2/packages/observable-md/src/util.ts#L11
 */
 //  Dynamic Functions ---
-export const FuncTypes = new Function(`
-return {
-    functionType: Object.getPrototypeOf(function () { }).constructor,
-    asyncFunctionType: Object.getPrototypeOf(async function () { }).constructor,
-    generatorFunctionType: Object.getPrototypeOf(function* () { }).constructor,
-    asyncGeneratorFunctionType: Object.getPrototypeOf(async function* () { }).constructor
+export const FuncTypes = {
+  functionType: Object.getPrototypeOf(function () {}).constructor,
+  asyncFunctionType: Object.getPrototypeOf(async function () {}).constructor,
+  generatorFunctionType: Object.getPrototypeOf(function* () {}).constructor,
+  asyncGeneratorFunctionType: Object.getPrototypeOf(async function* () {})
+    .constructor,
 };
-`)();
 
 function funcType(async: boolean = false, generator: boolean = false) {
   if (!async && !generator) return FuncTypes.functionType;
@@ -101,17 +106,23 @@ export function compileCell(content: string): CompiledCell | undefined {
     .map((r) => (r.type === "Identifier" ? r.name : undefined))
     .filter(isDefined);
 
+  const blockStatement = c.body.type === "BlockStatement";
+  const { async, generator } = c;
+
   return {
     name: c.id ? getSource(c.id) : "",
     inputs,
     value: makeFunction(
       getSource(c.body),
-      c.async,
-      c.generator,
-      c.body.type === "BlockStatement",
+      async,
+      generator,
+      blockStatement,
       inputs
     ),
-  } as CompiledCell;
+    async,
+    generator,
+    blockStatement,
+  };
 }
 
 export function load(content: string): { cells: vscode.NotebookCellData[] } {
@@ -138,14 +149,7 @@ export function load(content: string): { cells: vscode.NotebookCellData[] } {
           cellKind: vscode.CellKind.Markdown,
           source: mdString,
           language: "markdown",
-          outputs: [
-            {
-              outputKind: vscode.CellOutputKind.Rich,
-              data: {
-                "text/plain": getSource(cell.body.start, cell.body.end),
-              },
-            },
-          ],
+          outputs: [],
           metadata: {
             editable: true,
             runState: vscode.NotebookCellRunState.Idle,

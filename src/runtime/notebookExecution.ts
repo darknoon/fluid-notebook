@@ -7,43 +7,15 @@ import {
   Value,
 } from "@observablehq/runtime";
 import * as vscode from "vscode";
-import { compileCell } from "../ojs/loadNotebook";
-
-// For testing, just use this define func
-// https://observablehq.com/@tmcw/hello-world@7
-function helloWorldModule(runtime: Runtime, observer: Inspector) {
-  const main = runtime.module();
-
-  // md function is currently not working / not defined. investigate!
-  // main
-  //   .variable(observer("hello"))
-  //   .define(
-  //     "hello",
-  //     ["md", "name"],
-  //     (
-  //       md: (strs: TemplateStringsArray, ...rest: any[]) => any,
-  //       name: string
-  //     ): any => {
-  //       return md`# Hello ${name}`;
-  //     }
-  //   );
-  main.variable(observer("name")).define("name", () => "world");
-  return main;
-}
-
-// TODO: fix naked expressions
-
-interface ValueUpdateEvent {}
+import { compileCell, CompiledCell } from "../ojs/loadNotebook";
 
 // Holds onto the runtime and lets you execute cells
+// TODO: collect together runtime Disposables so we can dispose ourselves on close
 export class NotebookExecution {
   runtime = new Runtime();
   main: Module;
 
   variables = new Map<vscode.NotebookCell, Variable>();
-
-  private _valueChanged = new vscode.EventEmitter<ValueUpdateEvent>();
-  valueChanged = this._valueChanged.event;
 
   document: vscode.NotebookDocument;
 
@@ -75,7 +47,8 @@ export class NotebookExecution {
 
         let v = this.variables.get(cell);
         if (v === undefined) {
-          v = this.main.variable(this.createInspector(cell, name));
+          const ins = this.createInspector(cell, compiled, name);
+          v = this.main.variable(ins);
           this.variables.set(cell, v);
         }
 
@@ -91,6 +64,7 @@ export class NotebookExecution {
 
   createInspector = (
     cell: vscode.NotebookCell,
+    compiled: CompiledCell,
     name: string | null
   ): VariableInspector => {
     // @ts-ignore
@@ -100,7 +74,8 @@ export class NotebookExecution {
     console.log("asked for inspector for name: ", name);
     return {
       pending() {
-        console.log(debugName, "pending value");
+        cell.metadata.statusMessage = "pending";
+        cell.metadata.runState = vscode.NotebookCellRunState.Running;
       },
       fulfilled(value) {
         // Find the right cell for this, how??
@@ -111,11 +86,19 @@ export class NotebookExecution {
             text: String(value),
           },
         ];
+        if (compiled.generator) {
+          cell.metadata.statusMessage = "";
+          cell.metadata.runState = vscode.NotebookCellRunState.Running;
+        } else {
+          cell.metadata.statusMessage = "";
+          cell.metadata.runState = vscode.NotebookCellRunState.Idle;
+        }
 
         console.log(debugName, "fulfilled value", value);
       },
       rejected(error) {
         console.error(debugName, "Runtime error:", error);
+        cell.metadata.runState = vscode.NotebookCellRunState.Error;
       },
     };
   };

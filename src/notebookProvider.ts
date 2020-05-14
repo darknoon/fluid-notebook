@@ -7,8 +7,10 @@ import { serialize } from "./ojs/serialize";
 
 https://github.com/microsoft/vscode/issues/88243
 
-Wip julia impl:
+Reference julia impl:
 https://github.com/julia-vscode/julia-vscode/pull/980/files
+->
+https://github.com/julia-vscode/julia-vscode/blob/efcc643633016c7991774dcce5fc4d055041d067/src/notebookProvider.ts
 */
 
 export class NotebookContentProvider implements vscode.NotebookContentProvider {
@@ -27,7 +29,7 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
   static supportedLanguages = ["typescript", "markdown", "python"];
 
   // TODO: make a separate notebook thingy for each execution
-  runtimes = new Map<string /* URI string for now */, NotebookExecution>();
+  runtimes = new Map<vscode.NotebookDocument, NotebookExecution>();
 
   async openNotebook(uri: vscode.Uri): Promise<vscode.NotebookData> {
     const fileData = await vscode.workspace.fs.readFile(uri);
@@ -39,8 +41,6 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     // vscode.notebook.onDidOpenNotebookDocument(
     //   (doc: vscode.NotebookDocument) => {
     //     console.log("Did open document: ", doc);
-    //     if (doc.uri.toString() === uri.toString()) {
-    //     }
     //   }
     // );
 
@@ -85,11 +85,10 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
   onDidChangeNotebook = this.changeEmitter.event;
 
   ensureRuntime(document: vscode.NotebookDocument): NotebookExecution {
-    const uri = document.uri.toString();
-    let runtime = this.runtimes.get(uri);
+    let runtime = this.runtimes.get(document);
     if (runtime === undefined) {
       runtime = new NotebookExecution(document);
-      this.runtimes.set(uri, runtime);
+      this.runtimes.set(document, runtime);
       runtime.load();
     }
     return runtime;

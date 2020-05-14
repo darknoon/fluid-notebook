@@ -26,7 +26,7 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  static supportedLanguages = ["typescript", "markdown", "python"];
+  static supportedLanguages = ["javascript", "markdown", "python"];
 
   // TODO: make a separate notebook thingy for each execution
   runtimes = new Map<vscode.NotebookDocument, NotebookExecution>();

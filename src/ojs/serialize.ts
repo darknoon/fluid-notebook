@@ -6,14 +6,14 @@ export function serialize(document: vscode.NotebookDocument): string {
       // Right now all code is js / typescript
       case vscode.CellKind.Code: {
         if (cell.language === "python") {
-          return `py\`${cell.source}\`\;`;
+          return `py\`${cell.document.getText()}\`\;`;
         } else {
-          return cell.source;
+          return cell.document.getText();
         }
       }
 
       case vscode.CellKind.Markdown:
-        return `md\`${cell.source}\`\;`;
+        return `md\`${cell.document.getText()}\`\;`;
     }
   });
 

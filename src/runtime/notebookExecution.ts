@@ -2,7 +2,6 @@ import {
   Runtime,
   Module,
   VariableInspector,
-  Inspector,
   Variable,
   Value,
 } from "@observablehq/runtime";
@@ -15,6 +14,7 @@ export class NotebookExecution {
   runtime = new Runtime();
   main: Module;
 
+  /** For each cell, we keep track of the associated observable Variable */
   variables = new Map<vscode.NotebookCell, Variable>();
 
   document: vscode.NotebookDocument;
@@ -34,11 +34,18 @@ export class NotebookExecution {
   }
 
   updateCell(cell: vscode.NotebookCell) {
-    if (cell.cellKind == vscode.CellKind.Code) {
+    if (cell.cellKind === vscode.CellKind.Code) {
       // You could enter multiple variables in the cell?
-      // Actually that's not syntactically valid. I should make that more explicit...
+      // Actually that's not syntactically valid Observable. I should make that more explicit...
+      const source = cell.document.getText();
 
-      const compiled = compileCell(cell.source);
+      let compiled;
+      try {
+        compiled = compileCell(source, cell.language);
+      } catch (e) {
+        console.error("Compilation error: ", e, source);
+      }
+
       if (compiled) {
         const { name, inputs, value } = compiled;
         console.log(name, "created value update function: ", value.toString());
@@ -58,6 +65,9 @@ export class NotebookExecution {
         } else {
           v.define(inputs, value as Value);
         }
+      } else {
+        cell.metadata.statusMessage = "Could not compile";
+        cell.metadata.runState = vscode.NotebookCellRunState.Error;
       }
     }
   }

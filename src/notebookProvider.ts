@@ -3,25 +3,15 @@ import { NotebookExecution } from "./runtime/notebookExecution";
 import { load } from "./ojs/loadNotebook";
 import { serialize } from "./ojs/serialize";
 
-/* Notes:
-
-https://github.com/microsoft/vscode/issues/88243
-
-Reference julia impl:
-https://github.com/julia-vscode/julia-vscode/pull/980/files
-->
-https://github.com/julia-vscode/julia-vscode/blob/efcc643633016c7991774dcce5fc4d055041d067/src/notebookProvider.ts
-*/
-
 export class NotebookContentProvider implements vscode.NotebookContentProvider {
-  // Register ourselves for notebooks
+  // Register ourselves for notebooks when asked
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new NotebookContentProvider(context);
-    const providerRegistration = vscode.notebook.registerNotebookContentProvider(
+    const r = vscode.notebook.registerNotebookContentProvider(
       NotebookContentProvider.notebookType,
       provider
     );
-    return providerRegistration;
+    return vscode.Disposable.from(r);
   }
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -86,7 +76,10 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     );
   }
 
-  changeEmitter = new vscode.EventEmitter<vscode.NotebookDocumentChangeEvent>();
+  // Event emitter in case we need to tell VSCode we changed the notebook content?
+  private changeEmitter = new vscode.EventEmitter<
+    vscode.NotebookDocumentChangeEvent
+  >();
 
   onDidChangeNotebook = this.changeEmitter.event;
 

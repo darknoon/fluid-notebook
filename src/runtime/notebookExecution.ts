@@ -5,13 +5,20 @@ import {
   Variable,
   Value,
 } from "@observablehq/runtime";
+import { Library } from "@observablehq/stdlib";
 import * as vscode from "vscode";
 import { compileCell, CompiledCell } from "../ojs/loadNotebook";
+import { py } from "node-embed-python";
+
+function ExtendLibrary(l: Library) {
+  const fun = py;
+  return Object.assign(l, { py: () => fun });
+}
 
 // Holds onto the runtime and lets you execute cells
 // TODO: collect together runtime Disposables so we can dispose ourselves on close
 export class NotebookExecution {
-  runtime = new Runtime();
+  runtime = new Runtime(ExtendLibrary(new Library()));
   main: Module;
 
   /** For each cell, we keep track of the associated observable Variable */

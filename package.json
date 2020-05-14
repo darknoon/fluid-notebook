@@ -71,6 +71,6 @@
   "dependencies": {
     "@observablehq/parser": "^4.0.1",
     "@observablehq/runtime": "^4.7.0",
-    "node-embed-python": "../node-embed-python/"
+    "node-embed-python": "../node-embed-python"
   }
 }

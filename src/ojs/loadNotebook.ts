@@ -75,54 +75,88 @@ function funcType(async: boolean = false, generator: boolean = false) {
 /*
  */
 
+import { py } from "node-embed-python";
+
+const { ast: pyAst } = py`import ast`;
+const { _compile: pyCompile } = py`_compile = compile`;
+
+interface PyASTNode {
+  _fields: string[];
+}
+
 // When user changes document, this is what we need to actually provide to the runtime
-export function compileCell(content: string): CompiledCell | undefined {
-  // Just grab first cell right now, might make more sense to parse cell instea
-  // const [c] = parseModule(content).cells;
-  const c = parseCell(content);
-  if (typeof c !== "object") {
-    throw new Error("Missing cell");
-  }
+export function compileCell(
+  source: string,
+  language: string
+): CompiledCell | undefined {
+  if (language === "python") {
+    const c = pyAst.parse(source);
+    const type = py`a = type`.a;
+    console.log("dumped ast:", pyAst.dump(c));
 
-  const getSource = ({ start, end }: { start: number; end: number }) =>
-    content.slice(start, end);
+    let value;
+    try {
+      value = pyCompile(c);
+    } catch (e) {
+      return undefined;
+    }
 
-  // Compile the source to something that can acutally execute
-  const makeFunction = (
-    source: string,
-    async: boolean,
-    generator: boolean,
-    blockStatement: boolean,
-    inputs: string[]
-  ): Function => {
-    return new (funcType(async, generator))(
-      ...inputs,
-      blockStatement ? source : `{ return (${source}); }`
-    );
-  };
+    return {
+      name: null,
+      // TODO: analyze what variables are read in python function
+      inputs: [],
+      value,
+      // TODO: can we read these at runtime?
+      async: false,
+      generator: false,
+      blockStatement: true,
+    };
+  } else if (language === "javascript") {
+    const c = parseCell(source);
+    if (typeof c !== "object") {
+      throw new Error("Missing cell");
+    }
 
-  // Any references need to get turned into an argument string (a, b, c) for the function
-  const inputs: string[] = c.references
-    .map((r) => (r.type === "Identifier" ? r.name : undefined))
-    .filter(isDefined);
+    const getSource = ({ start, end }: { start: number; end: number }) =>
+      source.slice(start, end);
 
-  const blockStatement = c.body.type === "BlockStatement";
-  const { async, generator } = c;
+    // Compile the source to something that can actually execute
+    const makeFunction = (
+      source: string,
+      async: boolean,
+      generator: boolean,
+      blockStatement: boolean,
+      inputs: string[]
+    ): Function => {
+      return new (funcType(async, generator))(
+        ...inputs,
+        blockStatement ? source : `{ return (${source}); }`
+      );
+    };
 
-  return {
-    name: c.id ? getSource(c.id) : "",
-    inputs,
-    value: makeFunction(
-      getSource(c.body),
+    // Any references need to get turned into an argument string (a, b, c) for the function
+    const inputs: string[] = c.references
+      .map((r) => (r.type === "Identifier" ? r.name : undefined))
+      .filter(isDefined);
+
+    const blockStatement = c.body.type === "BlockStatement";
+    const { async, generator } = c;
+
+    return {
+      name: c.id ? getSource(c.id) : "",
+      inputs,
+      value: makeFunction(
+        getSource(c.body),
+        async,
+        generator,
+        blockStatement,
+        inputs
+      ),
       async,
       generator,
       blockStatement,
-      inputs
-    ),
-    async,
-    generator,
-    blockStatement,
-  };
+    };
+  }
 }
 
 export function load(content: string): { cells: vscode.NotebookCellData[] } {

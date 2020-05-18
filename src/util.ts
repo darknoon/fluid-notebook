@@ -1,11 +1,5 @@
-/// https://github.com/microsoft/vscode-extension-samples/blob/master/custom-editor-sample/src/util.ts
+import * as crypto from "crypto";
 
 export function getNonce() {
-  let text = "";
-  const possible =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return crypto.randomBytes(16).toString("hex");
 }

@@ -1,7 +1,19 @@
 import * as vscode from "vscode";
+import { UpdateCellMessage } from "./output/webview";
+import { getNonce } from "./util";
+
+const OutputMimeType = "application/vnd.darknoon.fluid-notebook";
+
+export interface NotebookOutput extends vscode.CellDisplayOutput {
+  data: {
+    [OutputMimeType]: {
+      ident: string;
+    };
+  };
+}
 
 export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
-  static mimeType = "application/vnd.darknoon.fluid-notebook";
+  static mimeType = OutputMimeType;
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new NotebookOutputRenderer(context);
@@ -10,7 +22,7 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
       { type: "display_data", subTypes: [NotebookOutputRenderer.mimeType] },
       provider
     );
-    return providerRegistration;
+    return vscode.Disposable.from(providerRegistration);
   }
 
   constructor(context: vscode.ExtensionContext) {
@@ -25,31 +37,37 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
     this._subs.forEach((d) => d.dispose());
   }
 
+  private cellToIdent = new Map<vscode.CellDisplayOutput, string>();
+
   render(
-    a: vscode.NotebookDocument,
-    output: vscode.CellDisplayOutput,
+    notebook: vscode.NotebookDocument,
+    output: NotebookOutput,
     mimeType: string
   ): string {
-    if (mimeType === NotebookOutputRenderer.mimeType) {
-      const nbe = vscode.notebook.activeNotebookEditor;
-
-      // if (nbe !== undefined) {
-      //   const pm = async () => {
-      //     console.log("posting message");
-      //     const ret = await nbe.postMessage({
-      //       message: "test test",
-      //     });
-      //     if (ret) {
-      //       console.log("posted mesasge");
-      //     }
-      //   };
-      //   pm();
-      // }
-      const data = output.data[NotebookOutputRenderer.mimeType];
-      return `<div><b>${data.stringValue}</b></div>`;
-    } else {
-      return `<div>Can't render this</div>`;
+    if (mimeType !== OutputMimeType) {
+      throw new Error(`Asked to render unknown MIME type ${mimeType}`);
     }
+    const data = output.data[OutputMimeType];
+    const { ident } = data as { ident: string };
+
+    // Doesn't work since we might not be the active notebook yet
+    // const uri = vscode.notebook.activeNotebookEditor?.asWebviewUri(
+    //   this.preloads[0]
+    // );
+
+    return /* html */ `
+      <!DOCTYPE html>
+      <html lang="en">
+        <body>
+        <div id="${ident}">Placeholder for <code>${ident}</code></div>
+        <script type="text/javascript">
+          console.log("Yo it's ${ident}");
+          console.log("window is " + JSON.stringify(Object.keys(window)));
+
+          setTimeout(() => window.subscribeCell("${ident}"), 15);
+        </script>
+        </body>
+      </html>`;
   }
 
   preloads: vscode.Uri[];

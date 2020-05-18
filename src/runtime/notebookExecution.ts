@@ -8,6 +8,9 @@ import {
 import * as vscode from "vscode";
 import { compileCell, CompiledCell } from "../ojs/loadNotebook";
 import { NotebookOutputRenderer } from "../notebookOutputRenderer";
+import { getNonce } from "../util";
+import { UpdateCellMessage } from "../output/webview";
+import { whenEditorActive } from "../hackNotebookEditorEvent";
 
 // Holds onto the runtime and lets you execute cells
 // TODO: collect together runtime Disposables so we can dispose ourselves on close
@@ -41,11 +44,12 @@ export class NotebookExecution {
       // I should make that more clear.
       const source = cell.document.getText();
 
-      let compiled;
+      let compiled: CompiledCell | undefined;
+      let compileError: Error | undefined;
       try {
         compiled = compileCell(source);
       } catch (e) {
-        console.error("Compilation error: ", e, source);
+        compileError = e;
       }
 
       if (compiled) {
@@ -68,10 +72,42 @@ export class NotebookExecution {
           v.define(inputs, value as Value);
         }
       } else {
-        cell.metadata.statusMessage = "Could not compile";
+        cell.metadata.statusMessage = compileError?.message || "Compile Error";
         cell.metadata.runState = vscode.NotebookCellRunState.Error;
       }
     }
+  }
+
+  nonces = new Map<vscode.NotebookCell, string>();
+
+  private checkActiveNotebookTimer: NodeJS.Timeout | undefined;
+  private _awaitingNotebook: ((e: vscode.NotebookEditor) => void)[] = [];
+
+  private checkActiveNow(): boolean {
+    console.log("checking active editor...");
+    if (
+      vscode.notebook.activeNotebookEditor &&
+      vscode.notebook.activeNotebookEditor.document === this.document
+    ) {
+      this._awaitingNotebook.forEach((fn) =>
+        fn(vscode.notebook.activeNotebookEditor!)
+      );
+      this._awaitingNotebook = [];
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private async getActiveNotebook(): Promise<vscode.NotebookEditor> {
+    return new Promise((res) => {
+      if (!this.checkActiveNow() && !this.checkActiveNotebookTimer) {
+        this.checkActiveNotebookTimer = setInterval(() => {
+          this.checkActiveNow();
+        }, 500);
+      }
+      this._awaitingNotebook.push(res);
+    });
   }
 
   createInspector = (
@@ -82,37 +118,68 @@ export class NotebookExecution {
     // Using some private api (handle) for debugging
     // @ts-ignore
     const debugName = name || `Cell #${cell?.handle}`;
+    const ident = getNonce();
+    this.nonces.set(cell, ident);
+    let firstOutput = true;
+    const doc = this.document;
     return {
       pending() {
-        cell.metadata.statusMessage = "pending";
-        cell.metadata.runState = vscode.NotebookCellRunState.Running;
+        if (firstOutput) {
+          cell.metadata.statusMessage = "pending";
+          cell.metadata.runState = vscode.NotebookCellRunState.Running;
+        }
       },
       fulfilled(value) {
-        // cell.outputs = [
-        //   {
-        //     outputKind: vscode.CellOutputKind.Text,
-        //     text: String(value),
-        //   },
-        // ];
-        cell.outputs = [
-          {
-            outputKind: vscode.CellOutputKind.Rich,
-            data: {
-              [NotebookOutputRenderer.mimeType]: {
-                rawValue: value,
-                stringValue: String(value),
+        // Only assign output the first time, otherwise VSCode will hang
+        if (firstOutput) {
+          // TODO: detect change of type of cell
+          cell.outputs = [
+            {
+              outputKind: vscode.CellOutputKind.Rich,
+              data: {
+                [NotebookOutputRenderer.mimeType]: {
+                  ident,
+                },
               },
             },
-          },
-        ];
-        if (compiled.generator) {
-          cell.metadata.statusMessage = "";
-          cell.metadata.runState = vscode.NotebookCellRunState.Running;
-        } else {
-          cell.metadata.statusMessage = "";
-          cell.metadata.runState = vscode.NotebookCellRunState.Idle;
+          ];
+
+          if (compiled.generator) {
+            cell.metadata.statusMessage = "";
+            cell.metadata.runState = vscode.NotebookCellRunState.Running;
+          } else {
+            cell.metadata.statusMessage = "";
+            cell.metadata.runState = vscode.NotebookCellRunState.Idle;
+          }
+          firstOutput = false;
         }
-        console.log(debugName, "Fulfilled value", value);
+        const message: UpdateCellMessage = {
+          type: "darknoon.updateCell",
+          ident,
+          value: {
+            string: String(value),
+          },
+        };
+        const editor = vscode.notebook.activeNotebookEditor;
+        if (editor) {
+          editor.postMessage(message);
+          console.log(debugName, "Told document to update", value);
+        } else {
+          console.warn(
+            debugName,
+            "Can't tell document to update, enqueue",
+            value
+          );
+          (async () => {
+            const editor = await whenEditorActive(doc);
+            console.log(
+              debugName,
+              "After waiing, told document to update",
+              value
+            );
+            editor.postMessage(message);
+          })();
+        }
       },
       rejected(error) {
         console.error(debugName, "Runtime error:", error);

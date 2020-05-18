@@ -41,7 +41,7 @@ export class NotebookExecution {
 
       let compiled;
       try {
-        compiled = compileCell(source, cell.language);
+        compiled = compileCell(source);
       } catch (e) {
         console.error("Compilation error: ", e, source);
       }

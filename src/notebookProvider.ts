@@ -38,11 +38,11 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     const { cells } = load(content);
 
     // This event is broken (never called in VSCode source code)
-    // vscode.notebook.onDidOpenNotebookDocument(
-    //   (doc: vscode.NotebookDocument) => {
-    //     console.log("Did open document: ", doc);
-    //   }
-    // );
+    vscode.notebook.onDidOpenNotebookDocument(
+      (doc: vscode.NotebookDocument) => {
+        console.log("Did open document: ", doc);
+      }
+    );
 
     vscode.notebook.onDidChangeNotebookDocument(
       (e: vscode.NotebookDocumentChangeEvent) => {

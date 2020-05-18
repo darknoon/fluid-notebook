@@ -7,6 +7,7 @@ import {
 } from "@observablehq/runtime";
 import * as vscode from "vscode";
 import { compileCell, CompiledCell } from "../ojs/loadNotebook";
+import { NotebookOutputRenderer } from "../notebookOutputRenderer";
 
 // Holds onto the runtime and lets you execute cells
 // TODO: collect together runtime Disposables so we can dispose ourselves on close
@@ -20,7 +21,7 @@ export class NotebookExecution {
   document: vscode.NotebookDocument;
 
   constructor(document: vscode.NotebookDocument) {
-    console.log("starting runtime...");
+    console.log("Starting fluid runtime...");
 
     this.document = document;
     this.main = this.runtime.module();
@@ -35,8 +36,9 @@ export class NotebookExecution {
 
   updateCell(cell: vscode.NotebookCell) {
     if (cell.cellKind === vscode.CellKind.Code) {
-      // You could enter multiple variables in the cell?
-      // Actually that's not syntactically valid Observable. I should make that more explicit...
+      // You could enter multiple variables in the cell, but it's
+      // not syntactically valid Observable.
+      // I should make that more clear.
       const source = cell.document.getText();
 
       let compiled;
@@ -51,9 +53,9 @@ export class NotebookExecution {
         console.log(name, "created value update function: ", value.toString());
 
         // Is there an existing variable?
-
         let v = this.variables.get(cell);
         if (v === undefined) {
+          // Create a new variable for the cell
           const ins = this.createInspector(cell, compiled, name);
           v = this.main.variable(ins);
           this.variables.set(cell, v);
@@ -86,10 +88,21 @@ export class NotebookExecution {
         cell.metadata.runState = vscode.NotebookCellRunState.Running;
       },
       fulfilled(value) {
+        // cell.outputs = [
+        //   {
+        //     outputKind: vscode.CellOutputKind.Text,
+        //     text: String(value),
+        //   },
+        // ];
         cell.outputs = [
           {
-            outputKind: vscode.CellOutputKind.Text,
-            text: String(value),
+            outputKind: vscode.CellOutputKind.Rich,
+            data: {
+              [NotebookOutputRenderer.mimeType]: {
+                rawValue: value,
+                stringValue: String(value),
+              },
+            },
           },
         ];
         if (compiled.generator) {

@@ -8,16 +8,31 @@
 
 - Can this work with the remote extension? Any particular things I need to ensure that it will be safe? I noticed that the Julia code [is using Uri.toString()](https://github.com/julia-vscode/julia-vscode/blob/efcc643633016c7991774dcce5fc4d055041d067/src/notebookProvider.ts#L340)
 
+- How do I attach DevTools to the Webview that is hosting the cell outputs?
+
+- This must be a string or other json serilizable object. "serializable" -> "serializable"
+
+- `postMessage()` on output webview ->
+  rejected promise not handled within 1 second: TypeError: o.postMessage is not a function
+
 ### misc
 
 Notebook progress
 https://github.com/microsoft/vscode/issues/88243
 
-Reference julia impl:
+## Reference extensions
+
+### julia
+
 https://github.com/julia-vscode/julia-vscode/pull/980/files
 ->
 https://github.com/julia-vscode/julia-vscode/blob/efcc643633016c7991774dcce5fc4d055041d067/src/notebookProvider.ts
 https://github.com/microsoft/vscode/issues/85682#issuecomment-626896475
 
-Cool:
+### Github issues extension
+
+https://github.com/microsoft/vscode-github-issue-notebooks
+
+## Cool
+
 https://nteract.gitbooks.io/hydrogen/

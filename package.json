@@ -16,12 +16,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "fluid-notebook.helloWorld",
-        "title": "Hello World"
-      }
-    ],
     "notebookProvider": [
       {
         "viewType": "darknoon.fluid-notebook",
@@ -33,16 +27,13 @@
         ]
       }
     ],
-    "customEditors": [
+    "notebookOutputRenderer": [
       {
-        "viewType": "darknoon.fluid-notebook",
-        "displayName": "Fluid Notebook",
-        "selector": [
-          {
-            "filenamePattern": "*.flnb"
-          }
-        ],
-        "priority": "default"
+        "viewType": "darknoon.fluid-notebook-dom",
+        "displayName": "Fluid Notebook DOM output",
+        "mimeTypes": [
+          "application/vnd.darknoon.fluid-notebook"
+        ]
       }
     ]
   },

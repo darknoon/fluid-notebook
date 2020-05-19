@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { UpdateCellMessage } from "./output/webview";
-import { getNonce } from "./util";
+import { CellValue, CellBootedMessage } from "./webview/webview";
 
 const OutputMimeType = "application/vnd.darknoon.fluid-notebook";
 
@@ -25,10 +24,20 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
     return vscode.Disposable.from(providerRegistration);
   }
 
+  private _context: vscode.ExtensionContext;
+
   constructor(context: vscode.ExtensionContext) {
-    this.preloads = [
-      vscode.Uri.joinPath(context.extensionUri, "out", "output", "webview.js"),
-    ];
+    this._context = context;
+    this.preloads = [this.localResourceUri("main.js")];
+  }
+
+  localResourceUri(name: string) {
+    return vscode.Uri.joinPath(
+      this._context.extensionUri,
+      "out",
+      "webview",
+      name
+    );
   }
 
   private _subs: vscode.Disposable[] = [];
@@ -36,8 +45,6 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
   dispose() {
     this._subs.forEach((d) => d.dispose());
   }
-
-  private cellToIdent = new Map<vscode.CellDisplayOutput, string>();
 
   render(
     notebook: vscode.NotebookDocument,
@@ -52,22 +59,36 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
 
     // Doesn't work since we might not be the active notebook yet
     // const uri = vscode.notebook.activeNotebookEditor?.asWebviewUri(
-    //   this.preloads[0]
+    //   this.localResourceUri("main.js")
     // );
 
-    return /* html */ `
-      <!DOCTYPE html>
-      <html lang="en">
-        <body>
-        <div id="${ident}">Placeholder for <code>${ident}</code></div>
-        <script type="text/javascript">
-          console.log("Yo it's ${ident}");
-          console.log("window is " + JSON.stringify(Object.keys(window)));
+    // console.log("booting cell with uri: ", uri.toString());
 
-          setTimeout(() => window.subscribeCell("${ident}"), 15);
+    // Couldn't get it to work without a delay here
+    // const timeout = 100;
+
+    const bootMessage: CellBootedMessage = {
+      type: "darknoon.cellBooted",
+      ident,
+    };
+
+    return /* html */ `
+        <div class="darknoon-fluid-notebook-output unbooted" id="${ident}">Unbooted <code>${ident}</code></div>
+        <script>
+            (() => {
+              const vscode = acquireVsCodeApi();
+              vscode.postMessage(${JSON.stringify(bootMessage)})
+            })()
+
+            // I saw this in the julia-vega example, but for whatever reason our preload doesn't load early enough... :(
+            if ("subscribeCell" in window) {
+              console.error("Subscribed for id ${ident}");
+              subscribeCell("${ident}");
+            } else {
+              console.error("Couldn't subscribe for id ${ident}. Waiting for our preload script.");
+            }
         </script>
-        </body>
-      </html>`;
+      `;
   }
 
   preloads: vscode.Uri[];

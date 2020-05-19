@@ -2,6 +2,12 @@ import * as vscode from "vscode";
 import { NotebookExecution } from "./runtime/notebookExecution";
 import { load } from "./ojs/loadNotebook";
 import { serialize } from "./ojs/serialize";
+import { whenEditorActive } from "./hackNotebookEditorEvent";
+import {
+  isCellBootedMessage,
+  CellBootedMessage,
+  UpdateCellMessage,
+} from "./webview/webview";
 
 /* Notes:
 
@@ -31,6 +37,8 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
   // TODO: make a separate notebook thingy for each execution
   runtimes = new Map<vscode.NotebookDocument, NotebookExecution>();
 
+  private _disposables: vscode.Disposable[] = [];
+
   async openNotebook(uri: vscode.Uri): Promise<vscode.NotebookData> {
     const fileData = await vscode.workspace.fs.readFile(uri);
     const content = fileData.toString();
@@ -40,14 +48,19 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     // This event is broken (never called in VSCode source code)
     vscode.notebook.onDidOpenNotebookDocument(
       (doc: vscode.NotebookDocument) => {
-        console.log("Did open document: ", doc);
+        console.log("Did open document: ", doc.uri);
       }
     );
 
-    vscode.notebook.onDidChangeNotebookDocument(
-      (e: vscode.NotebookDocumentChangeEvent) => {
-        this.ensureRuntime(e.document);
-      }
+    // This helps document start running immediately, but causes some complexity b/c editor isn't really ready
+    this._disposables.push(
+      vscode.notebook.onDidChangeNotebookDocument(
+        (e: vscode.NotebookDocumentChangeEvent) => {
+          if (e.document.uri.toString() === uri.toString()) {
+            this.ensureRuntimeWhenActive(e.document);
+          }
+        }
+      )
     );
 
     return {
@@ -58,6 +71,40 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
         hasExecutionOrder: false,
       },
     };
+  }
+
+  private async ensureRuntimeWhenActive(document: vscode.NotebookDocument) {
+    const ourEditor = await whenEditorActive(document);
+    console.log(
+      "subscribing to webview messages for document",
+      document.uri.toString()
+    );
+    this._disposables.push(
+      ourEditor.onDidReceiveMessage((message) => {
+        if (isCellBootedMessage(message)) {
+          this._handleMessage(ourEditor, message);
+        }
+      })
+    );
+    this.ensureRuntime(document);
+  }
+
+  private _handleMessage(editor: vscode.NotebookEditor, m: CellBootedMessage) {
+    const { ident } = m;
+    // send the cell a message with the current value
+    const runtime = this.runtimes.get(editor.document);
+    const latest = runtime?.latestValues.get(m.ident);
+    if (latest !== undefined) {
+      const m: UpdateCellMessage = {
+        type: "darknoon.updateCell",
+        ident,
+        value: {
+          string: String(latest),
+        },
+      };
+      console.log(`Reply to webview boot: ${ident}: ${String(latest)}`);
+      editor.postMessage(m);
+    }
   }
 
   serialize(document: vscode.NotebookDocument): Buffer {

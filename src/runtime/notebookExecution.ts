@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { compileCell, CompiledCell } from "../ojs/loadNotebook";
 import { NotebookOutputRenderer } from "../notebookOutputRenderer";
 import { getNonce } from "../util";
-import { UpdateCellMessage } from "../output/webview";
+import { UpdateCellMessage } from "../webview/webview";
 import { whenEditorActive } from "../hackNotebookEditorEvent";
 
 // Holds onto the runtime and lets you execute cells
@@ -28,6 +28,10 @@ export class NotebookExecution {
 
     this.document = document;
     this.main = this.runtime.module();
+  }
+
+  dispose() {
+    this.runtime.dispose();
   }
 
   load() {
@@ -54,7 +58,7 @@ export class NotebookExecution {
 
       if (compiled) {
         const { name, inputs, value } = compiled;
-        console.log(name, "created value update function: ", value.toString());
+        // console.log(name, "created value update function: ", value.toString());
 
         // Is there an existing variable?
         let v = this.variables.get(cell);
@@ -80,35 +84,7 @@ export class NotebookExecution {
 
   nonces = new Map<vscode.NotebookCell, string>();
 
-  private checkActiveNotebookTimer: NodeJS.Timeout | undefined;
-  private _awaitingNotebook: ((e: vscode.NotebookEditor) => void)[] = [];
-
-  private checkActiveNow(): boolean {
-    console.log("checking active editor...");
-    if (
-      vscode.notebook.activeNotebookEditor &&
-      vscode.notebook.activeNotebookEditor.document === this.document
-    ) {
-      this._awaitingNotebook.forEach((fn) =>
-        fn(vscode.notebook.activeNotebookEditor!)
-      );
-      this._awaitingNotebook = [];
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private async getActiveNotebook(): Promise<vscode.NotebookEditor> {
-    return new Promise((res) => {
-      if (!this.checkActiveNow() && !this.checkActiveNotebookTimer) {
-        this.checkActiveNotebookTimer = setInterval(() => {
-          this.checkActiveNow();
-        }, 500);
-      }
-      this._awaitingNotebook.push(res);
-    });
-  }
+  latestValues = new Map<string, any>();
 
   createInspector = (
     cell: vscode.NotebookCell,
@@ -122,6 +98,7 @@ export class NotebookExecution {
     this.nonces.set(cell, ident);
     let firstOutput = true;
     const doc = this.document;
+    const latestValues = this.latestValues;
     return {
       pending() {
         if (firstOutput) {
@@ -130,6 +107,7 @@ export class NotebookExecution {
         }
       },
       fulfilled(value) {
+        latestValues.set(ident, value);
         // Only assign output the first time, otherwise VSCode will hang
         if (firstOutput) {
           // TODO: detect change of type of cell
@@ -174,7 +152,7 @@ export class NotebookExecution {
             const editor = await whenEditorActive(doc);
             console.log(
               debugName,
-              "After waiing, told document to update",
+              "After waiting, told document to update",
               value
             );
             editor.postMessage(message);

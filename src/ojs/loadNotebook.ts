@@ -5,6 +5,7 @@ import {
   TaggedTemplateExpression,
   parseCell,
 } from "@observablehq/parser";
+import { NotebookOutputRenderer } from "../notebookOutputRenderer";
 
 interface MarkdownStructure extends TaggedTemplateExpression {
   tag: {

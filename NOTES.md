@@ -16,7 +16,10 @@
   rejected promise not handled within 1 second: TypeError: o.postMessage is not a function
 
 - `output-renderer` branch is very broken. Changing cell status quickly causes window to lock up.
+
   - solution: only make the output once for a cell, change output via `postMessage()` instead
+
+- There is a bit of a catch-22 with output cells: when you load them, preloads[] seem to not be loaded yet (I added my function to the document)
 
 ### misc
 

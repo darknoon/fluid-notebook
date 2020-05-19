@@ -1,0 +1,59 @@
+md`# Generator Test
+
+This is some text. Why does it say "undefined"?`;
+
+a = 12
+
+b = a + 2
+
+function* range(n) {
+  for (let i = 0; i < n; ++i) {
+    yield i;
+  }
+}
+
+size = 80
+
+diagram = `
+<svg width=${size} height=${size}>
+    <circle id="mycx" cx=${size/2} cy=${size/2} r=${size/3} />
+</svg>`
+
+link = `<div><br /><a href="http://apple.com">Click this?<br /></a></div>`
+
+py`def my_func():
+    return`;
+
+p = await new Promise(res => {setTimeout(() => res(22), 1400);})
+
+md`# Import Test`;
+
+viewof alphabeta = {
+    const form = html`<form style="font: 12px var(--sans-serif);">
+    <label style="display: block;">
+      <input name=a type=range min=0 max=5 step=0.01 style="width:180px;">
+      a = <output name=oa></output>
+    </label>
+    <label style="display: block;">
+      <input name=b type=range min=0 max=5 step=0.01 style="width:180px;">
+      b = <output name=ob></output>
+    </label>
+  </form>`;
+    form.oninput = () => {
+      form.value = [form.a.valueAsNumber, form.b.valueAsNumber];
+      form.oa.value = form.a.valueAsNumber;
+      form.ob.value = form.b.valueAsNumber;
+    };
+    form.oninput();
+    return form;
+  }
+
+viewof cars
+
+md`### Selection:
+~~~json
+
+${cars}
+
+~~~
+`;

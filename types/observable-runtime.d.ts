@@ -11,6 +11,8 @@ declare module "@observablehq/runtime" {
 
     module(): Module;
     module(define: any, observer: Inspector): Module;
+
+    dispose(): void;
   }
   interface VariableInspector {
     pending(): void;

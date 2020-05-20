@@ -4,6 +4,8 @@ The goal of this extension is to provide a seamless node.js notebook experience.
 
 Initially, it is based on the observable parser and runtime and integrates with the forthcoming VSCode native notebook support.
 
+** This branch requires compiling the latest master version of VSCode from source as of 20 May 2020 **
+
 ## Features
 
 - [x] Run node js code

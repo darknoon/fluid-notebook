@@ -1,8 +1,7 @@
-md`# Generator Test
+md`# Test
+`;
 
-This is some text. Why does it say "undefined"?`;
-
-a = 12
+a = 1
 
 b = a + 2
 

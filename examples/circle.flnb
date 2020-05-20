@@ -2,7 +2,7 @@ md`# Generator Test
 
 This is some text. Why does it say "undefined"?`;
 
-a = 12
+a = 2
 
 b = a + 2
 
@@ -12,12 +12,19 @@ function* range(n) {
   }
 }
 
-size = 80
+size = 22
 
 diagram = `
 <svg width=${size} height=${size}>
     <circle id="mycx" cx=${size/2} cy=${size/2} r=${size/3} />
 </svg>`
+
+greenCircle = {
+    return `
+        <svg width=${size} height=${size}>
+            <circle id="1b1e" fill="#090" cx=${size/2} cy=${size/2} r=${size/3} />
+        </svg>`
+}
 
 link = `<div><br /><a href="http://apple.com">Click this?<br /></a></div>`
 

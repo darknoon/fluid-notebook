@@ -9,12 +9,77 @@ import * as vscode from "vscode";
 import { compileCell, CompiledCell } from "../ojs/loadNotebook";
 import { NotebookOutputRenderer } from "../notebookOutputRenderer";
 import { getNonce } from "../util";
-import { UpdateCellMessage } from "../webview/webview";
+import { UpdateCellMessage, isCellBootedMessage, CellBootedMessage } from "../webview/webview";
 import { whenEditorActive } from "../hackNotebookEditorEvent";
 
 // Holds onto the runtime and lets you execute cells
 // TODO: collect together runtime Disposables so we can dispose ourselves on close
-export class NotebookExecution {
+// There is one of these globally!
+export class FluidKernel implements vscode.NotebookKernel, vscode.Disposable {
+
+  label = "Fluid Node.js / Python"
+
+  // At the moment we don't need to do this since we are coupled to the notebook provider itself
+  // public static register(context: vscode.ExtensionContext): vscode.Disposable {
+  //   const kernel = new FluidKernel(context);
+  //   const providerRegistration = vscode.notebook.registerNotebookKernel(
+  //     "darknoon.fluid-notebook.dom",
+  //     [],
+  //     kernel
+  //   );
+  //   return providerRegistration;
+  // }
+
+  constructor(context: vscode.ExtensionContext) {
+    this.preloads = [
+      vscode.Uri.joinPath(
+        context.extensionUri,
+        "out",
+        "webview",
+        "main.js"
+      )
+    ]
+  }
+
+  runtimes = new Map<vscode.NotebookDocument, NotebookRuntime>();
+
+  ensureRuntime(document: vscode.NotebookDocument): NotebookRuntime {
+    let runtime = this.runtimes.get(document);
+    if (runtime === undefined) {
+      runtime = new NotebookRuntime(document);
+      this.runtimes.set(document, runtime);
+      runtime.load();
+    }
+    return runtime;
+  }
+
+  private _disposables: vscode.Disposable[] = [];
+
+  async executeCell(document: vscode.NotebookDocument, cell: vscode.NotebookCell, token: vscode.CancellationToken): Promise<void> {
+    // This is where we get told that the user changed something with the notebook
+    const runtime = this.ensureRuntime(document);
+    runtime.updateCell(cell);
+  }
+
+  async executeAllCells(document: vscode.NotebookDocument, token: vscode.CancellationToken): Promise<void> {
+    const runtime = this.ensureRuntime(document);
+    for (let cell of document.cells) {
+      runtime.updateCell(cell);
+    }
+  }
+
+  dispose() {
+    this.runtimes.forEach(runtime => runtime.dispose())
+    this._disposables.forEach(d => d.dispose())
+  }
+
+  preloads?: vscode.Uri[];
+
+}
+
+// There is one of these PER NOTEBOOK
+class NotebookRuntime implements vscode.Disposable {
+  // Observable integration
   runtime = new Runtime();
   main: Module;
 
@@ -28,10 +93,50 @@ export class NotebookExecution {
 
     this.document = document;
     this.main = this.runtime.module();
+
+    this.subscribeWhenActive(document);
   }
+
+  private async subscribeWhenActive(document: vscode.NotebookDocument) {
+    console.log(
+      "Waiting for editor for our document:",
+      document.uri.toString()
+    );
+    const ourEditor = await whenEditorActive(document);
+    console.log(
+      "subscribing to webview messages for document",
+      document.uri.toString()
+    );
+    ourEditor.onDidReceiveMessage((message) => {
+      if (isCellBootedMessage(message)) {
+        this._handleMessage(ourEditor, message);
+      }
+    }, undefined, this._disposables)
+  }
+
+  private _disposables: vscode.Disposable[] = [];
+
+  private _handleMessage(editor: vscode.NotebookEditor, m: CellBootedMessage) {
+    const { ident } = m;
+    // send the cell a message with the current value
+    const latest = this.latestValues.get(m.ident);
+    if (latest !== undefined) {
+      const m: UpdateCellMessage = {
+        type: "darknoon.updateCell",
+        ident,
+        value: {
+          string: String(latest),
+        },
+      };
+      console.log(`Reply to webview boot: ${ident}: ${String(latest)}`);
+      editor.postMessage(m);
+    }
+  }
+
 
   dispose() {
     this.runtime.dispose();
+    this._disposables.forEach(d => d.dispose());
   }
 
   load() {

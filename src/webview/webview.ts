@@ -84,14 +84,13 @@ export function subscribeCell(ident: string) {
     console.log(`updating ${ident} with old message ${JSON.stringify(data)}`);
     messages.delete(ident);
   } else {
-    const bootMessage: CellBootedMessage = {
-      type: "darknoon.cellBooted",
-      ident,
-    };
     // TODO: get the type of this API?
     // @ts-ignore
     const vscode = acquireVsCodeApi();
-    vscode.postMessage(bootMessage);
+    vscode.postMessage({
+      type: "darknoon.cellBooted",
+      ident,
+    } as CellBootedMessage);
     elem.innerHTML = `<div>Booted ${ident}, waiting for value...</div>`;
   }
 }

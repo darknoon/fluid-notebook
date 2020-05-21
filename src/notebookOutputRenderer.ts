@@ -74,8 +74,8 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
         <div class="darknoon-fluid-notebook-output unbooted" id="${ident}">Unbooted <code>${ident}</code></div>
         <script type="module">
           ${uri ? `import {subscribeCell} from "${uri?.toString()}";` : ""}
-          console.info("Subscribed via ES6 import for id ${ident}");
           if (typeof subscribeCell !== "undefined") {
+            console.info("Subscribed via ES6 import for id ${ident}");
             subscribeCell("${ident}");
           } else {
             console.error("Couldn't subscribe for id ${ident}. Waiting for our preload script.");

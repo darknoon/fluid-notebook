@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "module": "ESNext",
+    "target": "es2019",
+    "lib": ["ES2019"],
+    "outDir": "../../out/webview/esm",
+    "sourceMap": true,
+    "declaration": true,
+    "composite": true,
+    "build": true
+  },
+  "files": ["webview.ts"]
+}

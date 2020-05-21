@@ -1,6 +1,7 @@
 // @ts-check
 const path = require("path");
 const webpack = require("webpack");
+
 // const CopyPlugin = require("copy-webpack-plugin");
 
 // const extConfig: webpack.Configuration = {
@@ -16,7 +17,7 @@ const webpack = require("webpack");
 //   externals: { vscode: "vscode" },
 // };
 
-const webviewConfig = {
+const webviewConfig /* webpack.Configuration */ = {
   target: "web",
   entry: "./src/webview/index.ts",
   output: {

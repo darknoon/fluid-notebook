@@ -12,7 +12,7 @@ function* range(n) {
   }
 }
 
-size = 22
+size = 89
 
 diagram = `
 <svg width=${size} height=${size}>

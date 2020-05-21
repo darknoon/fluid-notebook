@@ -11,12 +11,14 @@ export async function whenEditorActive(
   }
   return new Promise((resolve) => {
     console.log("Not the active editor, waiting until we are...");
-    const disposable = vscode.notebook.onDidChangeActiveNotebookEditor((editor) => {
-      if (editor?.document == document) {
-        resolve(editor);
-        // Unregister ourselves for future events
-        disposable.dispose();
+    const disposable = vscode.notebook.onDidChangeActiveNotebookEditor(
+      (editor) => {
+        if (editor?.document === document) {
+          resolve(editor);
+          // Unregister ourselves for future events
+          disposable.dispose();
+        }
       }
-    });
+    );
   });
 }

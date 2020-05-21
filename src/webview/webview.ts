@@ -22,22 +22,14 @@ export function isCellBootedMessage(data: any): data is CellBootedMessage {
   return typeof data === "object" && data.type === "darknoon.cellBooted";
 }
 
-export function initializeForDocument(doc: Document) {
-  console.log("webview.ts initializing for document: ", doc.nodeName);
-  addEventListener("message", listener);
+let _is_initted = false;
 
-  const unbooted = document.querySelectorAll(
-    ".darknoon-fluid-notebook-output.unbooted"
-  );
-  console.log(
-    "hello unbooted elements",
-    arrayFromNodeList(unbooted).map((e) => e.id)
-  );
-
-  unbooted.forEach((e) => {
-    subscribeCell(e.id);
-    e.classList.remove("unbooted");
-  });
+function initializeForDocument(doc: Document) {
+  if (!_is_initted) {
+    _is_initted = true;
+    console.log("webview.ts initializing for document: ", doc.nodeName);
+    addEventListener("message", listener);
+  }
 }
 
 console.log("hello from webview script");
@@ -74,10 +66,12 @@ const updateCell = (elem: Element, message: UpdateCellMessage) => {
 
 // Shared API for webview cells, will recieve
 export function subscribeCell(ident: string) {
+  initializeForDocument(document);
   const elem = document.getElementById(ident);
   if (elem === null) {
     throw new Error(`Can't subscribe cell #${ident} because id doesn't exist!`);
   }
+
   const data = messages.get(ident);
   if (data) {
     updateCell(elem, data);

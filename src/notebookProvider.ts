@@ -15,11 +15,10 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
   }
 
   // "Builtin" kernels are supported vs going through the registry
-  kernel: FluidKernel
-
+  kernel: FluidKernel;
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    this.kernel = new FluidKernel(this.context);;
+    this.kernel = new FluidKernel(this.context);
   }
 
   static supportedLanguages = ["javascript", "markdown", "python"];
@@ -42,26 +41,15 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
     );
 
     // This helps document start running immediately, but causes some complexity b/c editor isn't really ready
-    if (
-      // API is very new so check existence
-      typeof vscode.notebook.onDidChangeVisibleNotebookEditors === "function"
-    ) {
-      this._disposables.push(
-        vscode.notebook.onDidChangeVisibleNotebookEditors((eds) => {
-          console.log("Visible editors changed:", eds.map(ed => ed.active));
-        })
-      );
-    }
-
-    // this._disposables.push(
-    //   vscode.notebook.onDidChangeNotebookDocument(
-    //     (e: vscode.NotebookDocumentChangeEvent) => {
-    //       if (e.document.uri.toString() === uri.toString()) {
-    //         this.ensureRuntimeWhenActive(e.document);
-    //       }
-    //     }
-    //   )
-    // );
+    this._disposables.push(
+      vscode.notebook.onDidChangeVisibleNotebookEditors((eds) => {
+        console.log(
+          `Visible editors changed: ${JSON.stringify(
+            eds.map((ed) => ed.document.uri.toString())
+          )}`
+        );
+      })
+    );
 
     return {
       cells,

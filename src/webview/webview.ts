@@ -79,7 +79,6 @@ export function subscribeCell(ident: string) {
     messages.delete(ident);
   } else {
     // TODO: get the type of this API?
-    // @ts-ignore
     const vscode = acquireVsCodeApi();
     vscode.postMessage({
       type: "darknoon.cellBooted",

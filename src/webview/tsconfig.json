@@ -10,5 +10,5 @@
     "composite": true,
     "build": true
   },
-  "files": ["webview.ts"]
+  "files": ["webview.ts", "vscode-webview-api.d.ts"]
 }

@@ -59,15 +59,10 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
     const data = output.data[OutputMimeType];
     const { ident } = data as { ident: string };
 
-    const uri = vscode.notebook.activeNotebookEditor?.asWebviewUri(
-      // this.localResourceUri("main.js")
-      this.localResourceUri("esm/webview.js")
+    const editor = vscode.notebook.visibleNotebookEditors.find(
+      (ne) => ne.document === notebook
     );
-
-    const bootMessage: CellBootedMessage = {
-      type: "darknoon.cellBooted",
-      ident,
-    };
+    const uri = editor?.asWebviewUri(this.localResourceUri("esm/webview.js"));
 
     if (uri === undefined) {
       console.error(

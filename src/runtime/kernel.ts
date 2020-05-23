@@ -112,7 +112,7 @@ class NotebookRuntime implements vscode.Disposable {
     ourEditor.onDidReceiveMessage(
       (message) => {
         if (isCellBootedMessage(message)) {
-          this._handleMessage(ourEditor, message);
+          this._replyCellBoot(ourEditor, message);
         }
       },
       undefined,
@@ -122,7 +122,7 @@ class NotebookRuntime implements vscode.Disposable {
 
   private _disposables: vscode.Disposable[] = [];
 
-  private _handleMessage(editor: vscode.NotebookEditor, m: CellBootedMessage) {
+  private _replyCellBoot(editor: vscode.NotebookEditor, m: CellBootedMessage) {
     const { ident } = m;
     // send the cell a message with the current value
     const latest = this.latestValues.get(m.ident);
@@ -136,6 +136,8 @@ class NotebookRuntime implements vscode.Disposable {
       };
       console.log(`Reply to webview boot: ${ident}: ${String(latest)}`);
       editor.postMessage(m);
+    } else {
+      console.warn(`No latest value to send to cell ${ident}`);
     }
   }
 
@@ -145,7 +147,10 @@ class NotebookRuntime implements vscode.Disposable {
   }
 
   load() {
-    console.log("loading all cells...", this.document.cells);
+    console.log(
+      "loading all cells...",
+      this.document.cells.map((c) => `Cell ${c.uri.fragment}`)
+    );
     for (let c of this.document.cells) {
       this.updateCell(c);
     }
@@ -220,7 +225,6 @@ class NotebookRuntime implements vscode.Disposable {
         latestValues.set(ident, value);
         // Only assign output the first time, otherwise VSCode will hang
         if (firstOutput) {
-          // TODO: detect change of type of cell
           cell.outputs = [
             {
               outputKind: vscode.CellOutputKind.Rich,

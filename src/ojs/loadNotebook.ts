@@ -85,6 +85,8 @@ export function compileCell(content: string): CompiledCell | undefined {
     throw new Error("Missing cell");
   }
 
+  const p = require;
+
   const getSource = ({ start, end }: { start: number; end: number }) =>
     content.slice(start, end);
 

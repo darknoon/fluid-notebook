@@ -31,25 +31,19 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
 
     const { cells } = load(content);
 
-    // This event is broken (never called in VSCode source code)
-    this._disposables.push(
-      vscode.notebook.onDidOpenNotebookDocument(
-        (doc: vscode.NotebookDocument) => {
-          console.log("Did open document: ", doc.uri);
-        }
-      )
+    vscode.notebook.onDidOpenNotebookDocument(
+      (doc: vscode.NotebookDocument) => {
+        console.log(`Did open document: ${doc.uri.path}`);
+      },
+      this,
+      this._disposables
     );
 
-    // This helps document start running immediately, but causes some complexity b/c editor isn't really ready
-    this._disposables.push(
-      vscode.notebook.onDidChangeVisibleNotebookEditors((eds) => {
-        console.log(
-          `Visible editors changed: ${JSON.stringify(
-            eds.map((ed) => ed.document.uri.toString())
-          )}`
-        );
-      })
-    );
+    vscode.workspace.onDidOpenTextDocument((doc) => {
+      if (doc.uri.path === uri.path) {
+        console.log(`opened subdocument ${doc.uri.path}`);
+      }
+    });
 
     return {
       cells,

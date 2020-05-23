@@ -42,10 +42,10 @@ export class NotebookOutputRenderer implements vscode.NotebookOutputRenderer {
     );
   }
 
-  private _subs: vscode.Disposable[] = [];
+  private disposables: vscode.Disposable[] = [];
 
   dispose() {
-    this._subs.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
   }
 
   render(

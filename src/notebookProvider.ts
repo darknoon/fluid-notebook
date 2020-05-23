@@ -23,7 +23,7 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
 
   static supportedLanguages = ["javascript", "markdown", "python"];
 
-  private _disposables: vscode.Disposable[] = [];
+  private disposables: vscode.Disposable[] = [];
 
   async openNotebook(uri: vscode.Uri): Promise<vscode.NotebookData> {
     const fileData = await vscode.workspace.fs.readFile(uri);
@@ -36,7 +36,7 @@ export class NotebookContentProvider implements vscode.NotebookContentProvider {
         console.log(`Did open document: ${doc.uri.path}`);
       },
       this,
-      this._disposables
+      this.disposables
     );
 
     vscode.workspace.onDidOpenTextDocument((doc) => {

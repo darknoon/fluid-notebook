@@ -49,7 +49,7 @@ export class FluidKernel implements vscode.NotebookKernel, vscode.Disposable {
     return runtime;
   }
 
-  private _disposables: vscode.Disposable[] = [];
+  private disposables: vscode.Disposable[] = [];
 
   async executeCell(
     document: vscode.NotebookDocument,
@@ -73,7 +73,7 @@ export class FluidKernel implements vscode.NotebookKernel, vscode.Disposable {
 
   dispose() {
     this.runtimes.forEach((runtime) => runtime.dispose());
-    this._disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
   }
 
   preloads?: vscode.Uri[];
@@ -116,11 +116,11 @@ class NotebookRuntime implements vscode.Disposable {
         }
       },
       undefined,
-      this._disposables
+      this.disposables
     );
   }
 
-  private _disposables: vscode.Disposable[] = [];
+  private disposables: vscode.Disposable[] = [];
 
   private _replyCellBoot(editor: vscode.NotebookEditor, m: CellBootedMessage) {
     const { ident } = m;
@@ -143,7 +143,7 @@ class NotebookRuntime implements vscode.Disposable {
 
   dispose() {
     this.runtime.dispose();
-    this._disposables.forEach((d) => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
   }
 
   load() {
